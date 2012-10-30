@@ -1,0 +1,19 @@
+#!/bin/bash
+
+set -e
+set -o xtrace
+
+
+echo >> /etc/modules.conf << EOF
+
+alias mlx4_en eth2
+probe eth2 mlx4_core mlx4_en
+
+EOF
+
+echo >> /etc/rc.local << EOF
+
+modprobe mlx4_en
+
+EOF
+
