@@ -1,0 +1,14 @@
+#!/bin/bash
+set -eu
+
+BASE=$(dirname $0)/../
+VM_NAME=$1
+
+mac=$(sudo virsh dumpxml $VM_NAME | grep "mac address" | head -1 | awk -F "'" '{print $2}')
+if [ -z "$mac" ]; then
+  echo "mac $mac not found. it's possible that the vm just isn't up yet."
+  exit 1
+fi
+
+hostname=$(sudo awk "/$mac/ { print \$4 }" /var/lib/libvirt/dnsmasq/default.leases)
+echo $hostname

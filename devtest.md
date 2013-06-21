@@ -1,4 +1,4 @@
-VM (on Ubuntu)
+VM (Ubuntu and Fedora)
 ==============
 
 (There are detailed instructions available below, the overview and
@@ -35,7 +35,7 @@ machine 'bare metal' nodes.
         times.  See footnote [3] to set up Squid proxy.
 
   NOTE: The CPU architecture specified in several places must be consistent.
-	The examples here use 32-bit arch for the reduced memory footprint.  If
+  	The examples here use 32-bit arch for the reduced memory footprint.  If
 	you are running on real hardware, or want to test with 64-bit arch,
 	replace i386 => amd64 and i686 => x86_64 in all the commands below. You
 	will of course need amd64 capable hardware to do this.
@@ -97,18 +97,25 @@ __(Note: all of the following commands should be run on your host machine, not i
 
         cd $TRIPLEO_ROOT/tripleo-image-elements/elements/boot-stack
         sed -i "s/\"user\": \"stack\",/\"user\": \"`whoami`\",/" config.json
-
         cd $TRIPLEO_ROOT/incubator/
-        scripts/boot-elements boot-stack -o seed
 
-   Your SSH pub key has been copied to the resulting 'seed' VMs root
-   user.  It has been started by the boot-elements script, and can be logged
-   into at this point.
+    To build an Ubuntu node:
 
-   The IP address of the VM is printed out at the end of boot-elements, or
-   you can use the get-vm-ip script:
+        scripts/boot-elements boot-stack ubuntu cloud-init-nocloud -o seed
+
+    To build a Fedora node:
+
+        scripts/boot-elements boot-stack fedora disable-selinux -o seed
+
+
+    Your SSH pub key has been copied to the resulting 'seed' VMs root
+    user.  It has been started by the boot-elements script, and can be logged
+    into at this point.
+
+1. Get the IP address and hostname of the VM
 
         SEED_IP=`scripts/get-vm-ip seed`
+        SEED_HOSTNAME=`scripts/get-vm-hostname seed`
 
 1. Mask the SEED_IP out of your proxy settings
 
@@ -124,12 +131,12 @@ __(Note: all of the following commands should be run on your host machine, not i
 
         sudo $TRIPLEO_ROOT/bm_poseur/bm_poseur --vms 3 --arch i686 create-vm
 
-__(Note: if you have set http_proxy or https_proxy to a network host, you must either configure that network host to route traffic to your VM ip properly, or add the SEED_IP to your no_proxy environment variable value.)__
+    __(Note: if you have set http_proxy or https_proxy to a network host, you must either configure that network host to route traffic to your VM ip properly, or add the SEED_IP to your no_proxy environment variable value.)__
 
 1. Nova tools have been installed in $TRIPLEO_ROOT/incubator/scripts - you need
    to add that to the PATH (unless you have them installed already).
 
-        export PATH=$PATH:$TRIPLEO_ROOT/scripts
+        export PATH=$PATH:$TRIPLEO_ROOT/incubator/scripts
 
 1. Copy the openstack credentials out of the seed VM, and add the IP:
    (https://bugs.launchpad.net/tripleo/+bug/1191650)
@@ -147,13 +154,20 @@ __(Note: if you have set http_proxy or https_proxy to a network host, you must e
    XXX: need to only use the first node (the seed)
 
         user-config
-        setup-baremetal 1 512 10
+        setup-baremetal $SEED_HOSTNAME 1 512 10
 
 1. Create your undercloud image. This is the image that the seed nova
    will deploy to become the baremetal undercloud.
 
         export ELEMENTS_PATH=$TRIPLEO_ROOT/tripleo-image-elements/elements
-        $TRIPLEO_ROOT/diskimage-builder/bin/disk-image-create -u ubuntu -a i386 -o undercloud boot-stack
+
+    To build an Ubuntu undercloud node:
+
+        $TRIPLEO_ROOT/diskimage-builder/bin/disk-image-create -u -a i386 -o undercloud boot-stack ubuntu
+
+    To build a Fedora undercloud node:
+
+        $TRIPLEO_ROOT/diskimage-builder/bin/disk-image-create -u -a i386 -o undercloud boot-stack fedora disable-selinux
 
 1. Load the undercloud image into Glance:
 
@@ -182,15 +196,14 @@ __(Note: if you have set http_proxy or https_proxy to a network host, you must e
 
         scp root@$UNDERCLOUD_IP:stackrc $TRIPLEO_ROOT/undercloudrc
         sed -i "s/localhost/$UNDERCLOUD_IP/" $TRIPLEO_ROOT/undercloudrc
-	source $TRIPLEO_ROOT/undercloudrc
+        source $TRIPLEO_ROOT/undercloudrc
 
 1. Perform setup of your undercloud. The 1 512 10 is CPU count, memory in MB, disk
    in GB for your test nodes.
    XXX: need to mask out the first node (the seed)
 
         user-config
-        setup-baremetal 1 512 10
-
+        setup-baremetal $SEED_HOSTNAME 1 512 10
 
 The End!
 

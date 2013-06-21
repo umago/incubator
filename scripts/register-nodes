@@ -1,12 +1,13 @@
 #!/bin/bash
 set -eu
 
-CPU=$1
-MEM=$2
-DISK=$3
+HOSTNAME=$1
+CPU=$2
+MEM=$3
+DISK=$4
 
 for MAC in $MACS; do
-    nova baremetal-node-create ubuntu 1 512 10 $MAC
+    nova baremetal-node-create $HOSTNAME $CPU $MEM $DISK $MAC
     sleep 5
 done
 date
